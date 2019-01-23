@@ -10,6 +10,7 @@ import (
 type Polygon struct {
 	vertices []Vector3
 	normals  []Vector3
+	uv       []Vector2
 }
 
 // NewPolygon creates a new polygon
@@ -34,7 +35,26 @@ func NewPolygon(vertices []Vector3, normals []Vector3) (*Polygon, error) {
 		return nil, errors.New("The number of vertices and normals must match")
 	}
 
-	return &Polygon{vertices, normals}, nil
+	return &Polygon{vertices, normals, nil}, nil
+}
+
+// NewPolygonWithTexture creates a polygon with uv coordinates
+func NewPolygonWithTexture(vertices []Vector3, normals []Vector3, texture []Vector2) (*Polygon, error) {
+	poly, err := NewPolygon(vertices, normals)
+	if err != nil {
+		return nil, err
+	}
+
+	if texture == nil {
+		return nil, errors.New("Must provide texture")
+	}
+
+	if len(texture) != len(vertices) {
+		return nil, errors.New("Texture length must match vertices")
+	}
+
+	poly.uv = texture
+	return poly, nil
 }
 
 // Save Writes a polygon to obj format and returns the number of
@@ -53,7 +73,16 @@ func (p Polygon) Save(w io.Writer, pointOffset int) (int, error) {
 			return 0, err
 		}
 
-		face += fmt.Sprintf("%d//%d ", pointIndex+pointOffset, pointIndex+pointOffset)
+		if p.uv != nil {
+			_, err = w.Write([]byte(fmt.Sprintf("vt %f %f \n", p.uv[pointIndex].X(), p.uv[pointIndex].Y())))
+			if err != nil {
+				return 0, err
+			}
+			face += fmt.Sprintf("%d/%d ", pointIndex+pointOffset, pointIndex+pointOffset)
+		} else {
+			face += fmt.Sprintf("%d ", pointIndex+pointOffset)
+		}
+
 	}
 
 	_, err := w.Write([]byte(face + "\n"))

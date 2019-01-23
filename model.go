@@ -21,6 +21,9 @@ func NewModel(faces []*Polygon) (*Model, error) {
 // Save Writes a model to obj format
 func (m Model) Save(w io.Writer) error {
 
+	w.Write([]byte("mtllib master.mtl\n"))
+	w.Write([]byte("usemtl wood\n"))
+
 	offset := 1
 	var err error
 	for _, face := range m.faces {
