@@ -38,6 +38,26 @@ func NewPolygon(vertices []Vector3, normals []Vector3) (*Polygon, error) {
 	return &Polygon{vertices, normals, nil}, nil
 }
 
+// NewPolygonFromShape creates a 3D polygon from a 2D shape
+func NewPolygonFromShape(shape *Shape) *Polygon {
+	vertices := make([]Vector3, len(shape.points))
+	for i, point := range shape.points {
+		vertices[i] = *NewVector3(point.x, 0, point.y)
+	}
+	poly, _ := NewPolygon(vertices, vertices)
+	return poly
+}
+
+// NewPolygonFromFlatPoints creates a polygon from 2d points
+func NewPolygonFromFlatPoints(points []*Vector2) *Polygon {
+	vertices := make([]Vector3, len(points))
+	for i, point := range points {
+		vertices[i] = *NewVector3(point.x, 0, point.y)
+	}
+	poly, _ := NewPolygon(vertices, vertices)
+	return poly
+}
+
 // NewPolygonWithTexture creates a polygon with uv coordinates
 func NewPolygonWithTexture(vertices []Vector3, normals []Vector3, texture []Vector2) (*Polygon, error) {
 	poly, err := NewPolygon(vertices, normals)
