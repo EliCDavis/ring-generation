@@ -1,0 +1,11 @@
+version: '2'
+services:
+    ring-gen:
+        build:
+            context: ./
+        volumes:
+            - ./:/go/src/github.com/user/myProject/app
+        stdin_open: true
+        tty: true
+        entrypoint: /bin/bash
+        

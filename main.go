@@ -2,9 +2,14 @@ package main
 
 import (
 	"bufio"
+	"io/ioutil"
+	"log"
 	"math"
 	"os"
-	"sort"
+
+	"github.com/golang/freetype/truetype"
+	"github.com/pradeep-pyro/triangle"
+	"golang.org/x/image/font"
 )
 
 func check(e error) {
@@ -79,111 +84,112 @@ func lineIntersectsRectangle(x float64, y float64, width float64, height float64
 	return intersections
 }
 
-func subCarve(x float64, y float64, width float64, height float64, bounds []Vector2) []*Polygon {
+func fill(width float64, height float64, shapes []*Shape) []*Polygon {
 
-	// If there exists more than one point in our region, subdivide
-	var pointInRegion *Vector2
-	for _, point := range bounds {
-		if pointWithinBounds(x, y, width, height, point) {
-			if pointInRegion != nil {
-				return subDivide(x, y, width, height, bounds)
-			}
-			pointInRegion = &point
+	numOfPoints := 0
+	pointsPrefixSum := make([]int, len(shapes))
+	for i, shape := range shapes {
+		pointsPrefixSum[i] = numOfPoints
+		numOfPoints += len(shape.points)
+	}
+
+	flatPoints := make([][2]float64, numOfPoints)
+
+	for shapeIndex, shape := range shapes {
+		for pointIndex, point := range shape.points {
+			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][0] = point.X()
+			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][1] = point.Y()
 		}
 	}
 
-	// If there exists more than two lines in our region, subdivide
-	allIntersections := make([]*Vector2, 0)
-	for i := 1; i < len(bounds); i++ {
-		line := NewLine(&bounds[i-1], &bounds[i])
-		intersctions := lineIntersectsRectangle(x, y, width, height, line)
-		if len(intersctions) > 0 {
-			allIntersections = append(allIntersections, intersctions...)
-			if len(allIntersections) > 2 {
-				return subDivide(x, y, width, height, bounds)
-			}
+	segments := make([][2]int32, numOfPoints)
+
+	for shapeIndex, shape := range shapes {
+		for pointIndex := 0; pointIndex < len(shape.points); pointIndex++ {
+			i := pointIndex + pointsPrefixSum[shapeIndex]
+			segments[i][0] = int32(i)
+			segments[i][1] = int32(((pointIndex + 1) % len(shape.points)) + pointsPrefixSum[shapeIndex])
 		}
 	}
 
-	// If no intersections or points, determine whether or not if this region is inside or outside the bounds
-	if pointInRegion == nil && len(allIntersections) == 0 {
-		if isInside(bounds, NewVector2(x, y)) == false {
-			return makeSquareFrom2D(NewVector2(x, y), NewVector2(x+width, y+height))
-		}
-		return nil
+	// Hole represented by a point lying inside it
+	var holes = make([][2]float64, len(shapes))
+	for i, _ := range shapes {
+		holes[i][0] = 0
+		holes[i][1] = 0.0
 	}
 
-	// Else determine what corners of the rectangle we have access too
-	pointsToWorkWith := make([]*Vector2, 0)
-	if pointInRegion != nil {
-		pointsToWorkWith = append(pointsToWorkWith, pointInRegion)
-	}
-	if len(allIntersections) > 0 {
-		pointsToWorkWith = append(pointsToWorkWith, allIntersections...)
-	}
-	if isInside(bounds, NewVector2(x, y)) == false {
-		pointsToWorkWith = append(pointsToWorkWith, NewVector2(x, y))
-	}
-	if isInside(bounds, NewVector2(x+width, y)) == false {
-		pointsToWorkWith = append(pointsToWorkWith, NewVector2(x+width, y))
-	}
-	if isInside(bounds, NewVector2(x, y+height)) == false {
-		pointsToWorkWith = append(pointsToWorkWith, NewVector2(x, y+height))
-	}
-	if isInside(bounds, NewVector2(x+width, y+height)) == false {
-		pointsToWorkWith = append(pointsToWorkWith, NewVector2(x+width, y+height))
-	}
+	v, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
 
-	resultingShape := NewShape(pointsToWorkWith)
-	sort.Sort(resultingShape)
-	switch len(pointsToWorkWith) {
-	case 3:
-		return []*Polygon{NewPolygonFromShape(resultingShape)}
-
-	case 4:
-		return []*Polygon{
-			NewPolygonFromFlatPoints([]*Vector2{resultingShape.points[0], resultingShape.points[1], resultingShape.points[2]}),
-			NewPolygonFromFlatPoints([]*Vector2{resultingShape.points[0], resultingShape.points[2], resultingShape.points[3]}),
-		}
-
-	case 5:
-		closestPoint := resultingShape.PointClosestToCenter()
-		resultingPolygons := make([]*Polygon, 0)
-		for i := 1; i < len(resultingShape.points)+1; i++ {
-			n := i % len(resultingShape.points)
-			if n != closestPoint && i-1 != closestPoint {
-				if n > i {
-					resultingPolygons = append(
-						resultingPolygons,
-						NewPolygonFromFlatPoints([]*Vector2{resultingShape.points[i-1], resultingShape.points[n], resultingShape.points[closestPoint]}))
-				} else {
-					resultingPolygons = append(
-						resultingPolygons,
-						NewPolygonFromFlatPoints([]*Vector2{resultingShape.points[n], resultingShape.points[closestPoint], resultingShape.points[i-1]}))
-				}
-			}
-		}
-		return resultingPolygons
-
-	case 6:
-		return subDivide(x, y, width, height, bounds)
+	betterPolys := make([]*Polygon, len(faces))
+	for i, face := range faces {
+		ourVerts := make([]Vector3, 0)
+		ourVerts = append(ourVerts, *NewVector3(v[face[0]][0], 0, v[face[0]][1]))
+		ourVerts = append(ourVerts, *NewVector3(v[face[1]][0], 0, v[face[1]][1]))
+		ourVerts = append(ourVerts, *NewVector3(v[face[2]][0], 0, v[face[2]][1]))
+		poly, _ := NewPolygon(ourVerts, ourVerts)
+		betterPolys[i] = poly
 	}
-	panic("THERE ARE NOT THE RIGHT NUMBER OF POINTS: " + string(len(pointsToWorkWith)))
+	return betterPolys
 }
 
-func subDivide(x float64, y float64, width float64, height float64, bounds []Vector2) []*Polygon {
-	widthHalved := width / 2.0
-	heightHalved := height / 2.0
-	polys := make([]*Polygon, 0)
-	polys = append(polys, subCarve(x, y, widthHalved, heightHalved, bounds)...)
-	polys = append(polys, subCarve(x+widthHalved, y, widthHalved, heightHalved, bounds)...)
-	polys = append(polys, subCarve(x, y+heightHalved, widthHalved, heightHalved, bounds)...)
-	polys = append(polys, subCarve(x+widthHalved, y+heightHalved, widthHalved, heightHalved, bounds)...)
-	return polys
-}
+func carve(width float64, height float64, shapes []*Shape) []*Polygon {
 
-func carve(width float64, height float64, bounds []Vector2) []*Polygon {
-	return subDivide(0, 0, width, height, bounds)
+	numOfPoints := 4
+	pointsPrefixSum := make([]int, len(shapes))
+	for i, shape := range shapes {
+		pointsPrefixSum[i] = numOfPoints
+		numOfPoints += len(shape.points)
+	}
+
+	flatPoints := make([][2]float64, numOfPoints)
+
+	flatPoints[0] = [2]float64{0.0, 0.0}
+	flatPoints[1] = [2]float64{0.0, height}
+	flatPoints[2] = [2]float64{width, height}
+	flatPoints[3] = [2]float64{width, 0.0}
+
+	for shapeIndex, shape := range shapes {
+		for pointIndex, point := range shape.points {
+			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][0] = point.X()
+			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][1] = point.Y()
+		}
+	}
+
+	segments := make([][2]int32, numOfPoints)
+
+	segments[0] = [2]int32{0, 1}
+	segments[1] = [2]int32{1, 2}
+	segments[2] = [2]int32{2, 3}
+	segments[3] = [2]int32{3, 0}
+
+	for shapeIndex, shape := range shapes {
+		for pointIndex := 0; pointIndex < len(shape.points); pointIndex++ {
+			i := pointIndex + pointsPrefixSum[shapeIndex]
+			segments[i][0] = int32(i)
+			segments[i][1] = int32(((pointIndex + 1) % len(shape.points)) + pointsPrefixSum[shapeIndex])
+		}
+	}
+
+	// Hole represented by a point lying inside it
+	var holes = make([][2]float64, len(shapes))
+	for i, shape := range shapes {
+		holes[i][0] = shape.center.X()
+		holes[i][1] = shape.center.Y()
+	}
+
+	_, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
+
+	betterPolys := make([]*Polygon, len(faces))
+	for i, face := range faces {
+		ourVerts := make([]Vector3, 3)
+		ourVerts[0] = *NewVector3(flatPoints[face[0]][0], 0, flatPoints[face[0]][1])
+		ourVerts[1] = *NewVector3(flatPoints[face[1]][0], 0, flatPoints[face[1]][1])
+		ourVerts[2] = *NewVector3(flatPoints[face[2]][0], 0, flatPoints[face[2]][1])
+		poly, _ := NewPolygon(ourVerts, ourVerts)
+		betterPolys[i] = poly
+	}
+	return betterPolys
 }
 
 func main() {
@@ -298,14 +304,35 @@ func main() {
 	// model.Save(w)
 	// w.Flush()
 
-	ahhhhh := carve(1.0, 1.0, []Vector2{
-		Vector2{0.1, 0.1},
-		Vector2{0.1, 0.9},
-		Vector2{0.9, 0.9},
-		Vector2{0.9, 0.1},
-	})
+	fontByteData, err := ioutil.ReadFile("./sample.ttf")
+	check(err)
+	parsedFont, err := truetype.Parse(fontByteData)
+	check(err)
 
-	model, err := NewModel(ahhhhh)
+	fontFace := truetype.NewFace(parsedFont, &truetype.Options{})
+	fontFace.GlyphBounds([]rune("a")[0])
+
+	textToEnscribe := "resistance"
+
+	finalWord := make([]*Shape, 0)
+
+	for charIndex, char := range textToEnscribe {
+		log.Println(truetype.Index(char - 97))
+
+		glyph := truetype.GlyphBuf{}
+		glyph.Load(parsedFont, 12, truetype.Index(char-96), font.HintingFull)
+
+		log.Println("Points: ")
+		letterPoints := make([]*Vector2, len(glyph.Points))
+		for i, p := range glyph.Points {
+			letterPoints[i] = NewVector2(float64(p.X), float64(p.Y))
+		}
+		shape := NewShape(letterPoints)
+		shape.Translate(NewVector2(10*float64(charIndex), 0))
+		finalWord = append(finalWord, shape)
+	}
+
+	model, err := NewModel(fill(10.0*float64(len(textToEnscribe)), 10.0, finalWord))
 	check(err)
 
 	f, err := os.Create("out.obj")

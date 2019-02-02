@@ -2,6 +2,11 @@
 
 Attemping to generate meshes in obj format of rings to 3D print. End goal is to enscribe text onto the ring.
 
+To run use:
+```bash
+docker-compose run ring-gen
+```
+
 ## Current Progress
 
 ![Ring](https://i.imgur.com/pFQCKw4.png)

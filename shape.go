@@ -2,7 +2,7 @@ package main
 
 import "math"
 
-// Shape is a flat (2D) arrangement of points
+// Shape is a flat (2D) arrangement of points.
 type Shape struct {
 	points []*Vector2
 	center *Vector2
@@ -16,6 +16,18 @@ func NewShape(bounds []*Vector2) *Shape {
 	}
 
 	return &Shape{bounds, center.Scale(1.0 / float64(len(bounds)))}
+}
+
+// NewShapeWithCustomCenter creates a shape with a center you set
+func NewShapeWithCustomCenter(bounds []*Vector2, center *Vector2) *Shape {
+	return &Shape{bounds, center}
+}
+
+// Translate Moves all points over by the specified amount
+func (s *Shape) Translate(amount *Vector2) {
+	for i, point := range s.points {
+		s.points[i] = point.Add(amount)
+	}
 }
 
 // Len returns the number of points in the polygon
