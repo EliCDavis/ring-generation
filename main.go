@@ -329,7 +329,9 @@ func main() {
 		shape := NewShape(letterPoints)
 		shape.Scale(.1)
 
-		left, right := shape.Split(5)
+		bottomLeftBounds, topRightBounds := shape.GetBounds()
+
+		left, right := shape.Split(((topRightBounds.X() - bottomLeftBounds.X()) / 2) + bottomLeftBounds.X())
 
 		if len(left) > 0 {
 			lModel, _ := NewModel(carve(20.0, 20.0, left))
@@ -337,7 +339,7 @@ func main() {
 		}
 
 		if len(right) > 0 {
-			rModel, _ := NewModel(carve(20.0, 20.0, left))
+			rModel, _ := NewModel(carve(20.0, 20.0, right))
 			rModel = rModel.Translate(NewVector3(25, 0, 0))
 			finalWord = finalWord.Merge(rModel)
 		}

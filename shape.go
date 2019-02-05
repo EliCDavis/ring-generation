@@ -27,8 +27,7 @@ func NewShapeWithCustomCenter(bounds []*Vector2, center *Vector2) *Shape {
 	return &Shape{bounds, center, NewVector2(0, 0)}
 }
 
-// RandomPointInShape returns a random point inside of the shape
-func (s Shape) RandomPointInShape() *Vector2 {
+func (s Shape) GetBounds() (Vector2, Vector2) {
 	bottomLeftBounds := Vector2{10000000, 10000000}
 	topRightBounds := Vector2{-10000000, -10000000}
 	for _, p := range s.points {
@@ -46,6 +45,12 @@ func (s Shape) RandomPointInShape() *Vector2 {
 		}
 	}
 
+	return bottomLeftBounds, topRightBounds
+}
+
+// RandomPointInShape returns a random point inside of the shape
+func (s Shape) RandomPointInShape() *Vector2 {
+	bottomLeftBounds, topRightBounds := s.GetBounds()
 	for {
 		point := NewVector2(
 			bottomLeftBounds.x+(rand.Float64()*(topRightBounds.x-bottomLeftBounds.x)),
