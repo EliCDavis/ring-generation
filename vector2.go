@@ -30,12 +30,33 @@ func (v Vector2) Add(other *Vector2) *Vector2 {
 	}
 }
 
-// Scale multiplies each axis by the specifid value
-func (v Vector2) Scale(other float64) *Vector2 {
+func (v Vector2) Sub(other *Vector2) *Vector2 {
 	return &Vector2{
-		x: v.x * other,
-		y: v.y * other,
+		x: v.x - other.x,
+		y: v.y - other.y,
 	}
+}
+
+func (v *Vector2) Length() float64 {
+	return math.Sqrt((v.x * v.x) + (v.y * v.y))
+}
+
+func (v Vector2) Normalized() *Vector2 {
+	if v.Length() == 0 {
+		return NewVector2(v.x, v.y)
+	}
+	return v.DivByConstant(v.Length())
+}
+
+func (v *Vector2) MultByConstant(t float64) *Vector2 {
+	return &Vector2{
+		x: v.x * t,
+		y: v.y * t,
+	}
+}
+
+func (v *Vector2) DivByConstant(t float64) *Vector2 {
+	return v.MultByConstant(1.0 / t)
 }
 
 // Distance is the euclidian distance between two points

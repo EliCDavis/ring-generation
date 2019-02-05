@@ -11,6 +11,7 @@ func NewLine(p1, p2 *Vector2) *Line {
 	return &Line{p1, p2}
 }
 
+// Intersection finds where two lines intersect
 // https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 func (l Line) Intersection(other *Line) *Vector2 {
 

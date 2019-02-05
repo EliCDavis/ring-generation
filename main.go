@@ -174,18 +174,19 @@ func carve(width float64, height float64, shapes []*Shape) []*Polygon {
 	// Hole represented by a point lying inside it
 	var holes = make([][2]float64, len(shapes))
 	for i, shape := range shapes {
-		holes[i][0] = shape.center.X()
-		holes[i][1] = shape.center.Y()
+		pointInShape := shape.RandomPointInShape()
+		holes[i][0] = pointInShape.X()
+		holes[i][1] = pointInShape.Y()
 	}
 
-	_, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
+	v, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
 
 	betterPolys := make([]*Polygon, len(faces))
 	for i, face := range faces {
 		ourVerts := make([]Vector3, 3)
-		ourVerts[0] = *NewVector3(flatPoints[face[0]][0], 0, flatPoints[face[0]][1])
-		ourVerts[1] = *NewVector3(flatPoints[face[1]][0], 0, flatPoints[face[1]][1])
-		ourVerts[2] = *NewVector3(flatPoints[face[2]][0], 0, flatPoints[face[2]][1])
+		ourVerts[0] = *NewVector3(v[face[0]][0], 0, v[face[0]][1])
+		ourVerts[1] = *NewVector3(v[face[1]][0], 0, v[face[1]][1])
+		ourVerts[2] = *NewVector3(v[face[2]][0], 0, v[face[2]][1])
 		poly, _ := NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
@@ -309,30 +310,37 @@ func main() {
 	parsedFont, err := truetype.Parse(fontByteData)
 	check(err)
 
-	fontFace := truetype.NewFace(parsedFont, &truetype.Options{})
-	fontFace.GlyphBounds([]rune("a")[0])
+	// fontFace := truetype.NewFace(parsedFont, &truetype.Options{})
 
-	textToEnscribe := "resistance"
+	textToEnscribe := "r"
 
 	finalWord := make([]*Shape, 0)
 
-	for charIndex, char := range textToEnscribe {
-		log.Println(truetype.Index(char - 97))
+	for _, char := range textToEnscribe {
+		// log.Println(truetype.Index( - 97))
 
 		glyph := truetype.GlyphBuf{}
-		glyph.Load(parsedFont, 12, truetype.Index(char-96), font.HintingFull)
+		glyph.Load(parsedFont, 100, parsedFont.Index(char), font.HintingNone)
 
-		log.Println("Points: ")
 		letterPoints := make([]*Vector2, len(glyph.Points))
 		for i, p := range glyph.Points {
 			letterPoints[i] = NewVector2(float64(p.X), float64(p.Y))
 		}
 		shape := NewShape(letterPoints)
-		shape.Translate(NewVector2(10*float64(charIndex), 0))
-		finalWord = append(finalWord, shape)
+		shape.Scale(.1)
+
+		left, right := shape.Split(5)
+		shapeSplit := append(left, right...)
+		for i := 0; i < len(shapeSplit); i++ {
+			shapeSplit[i].Translate(NewVector2(7*float64(i), 7))
+			finalWord = append(finalWord, shapeSplit[i])
+		}
+		log.Print(len(shapeSplit))
+		//shape.Translate(NewVector2(7*float64(charIndex), 5))
+
 	}
 
-	model, err := NewModel(fill(10.0*float64(len(textToEnscribe)), 10.0, finalWord))
+	model, err := NewModel(carve(50.0*float64(len(textToEnscribe)), 20.0, finalWord))
 	check(err)
 
 	f, err := os.Create("out.obj")
