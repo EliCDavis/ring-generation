@@ -18,6 +18,18 @@ func NewModel(faces []*Polygon) (*Model, error) {
 	return &Model{faces}, nil
 }
 
+func (m Model) Merge(other *Model) *Model {
+	return &Model{append(m.faces, other.faces...)}
+}
+
+func (m Model) Translate(movement *Vector3) *Model {
+	newFaces := make([]*Polygon, len(m.faces))
+	for f := range m.faces {
+		newFaces[f] = m.faces[f].Translate(movement)
+	}
+	return &Model{newFaces}
+}
+
 // Save Writes a model to obj format
 func (m Model) Save(w io.Writer) error {
 

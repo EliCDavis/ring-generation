@@ -38,6 +38,14 @@ func NewPolygon(vertices []Vector3, normals []Vector3) (*Polygon, error) {
 	return &Polygon{vertices, normals, nil}, nil
 }
 
+func (p Polygon) Translate(mv *Vector3) *Polygon {
+	newVertices := make([]Vector3, len(p.vertices))
+	for pIndex := range p.vertices {
+		newVertices[pIndex] = *p.vertices[pIndex].Add(mv)
+	}
+	return &Polygon{newVertices, p.normals, p.uv}
+}
+
 // NewPolygonFromShape creates a 3D polygon from a 2D shape
 func NewPolygonFromShape(shape *Shape) *Polygon {
 	vertices := make([]Vector3, len(shape.points))

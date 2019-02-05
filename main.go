@@ -3,7 +3,6 @@ package main
 import (
 	"bufio"
 	"io/ioutil"
-	"log"
 	"math"
 	"os"
 
@@ -314,7 +313,8 @@ func main() {
 
 	textToEnscribe := "r"
 
-	finalWord := make([]*Shape, 0)
+	finalWord, err := NewModel([]*Polygon{})
+	check(err)
 
 	for _, char := range textToEnscribe {
 		// log.Println(truetype.Index( - 97))
@@ -330,25 +330,28 @@ func main() {
 		shape.Scale(.1)
 
 		left, right := shape.Split(5)
-		shapeSplit := append(left, right...)
-		for i := 0; i < len(shapeSplit); i++ {
-			shapeSplit[i].Translate(NewVector2(7*float64(i), 7))
-			finalWord = append(finalWord, shapeSplit[i])
+
+		if len(left) > 0 {
+			lModel, _ := NewModel(carve(20.0, 20.0, left))
+			finalWord = finalWord.Merge(lModel)
 		}
-		log.Print(len(shapeSplit))
+
+		if len(right) > 0 {
+			rModel, _ := NewModel(carve(20.0, 20.0, left))
+			rModel = rModel.Translate(NewVector3(25, 0, 0))
+			finalWord = finalWord.Merge(rModel)
+		}
+
 		//shape.Translate(NewVector2(7*float64(charIndex), 5))
 
 	}
-
-	model, err := NewModel(carve(50.0*float64(len(textToEnscribe)), 20.0, finalWord))
-	check(err)
 
 	f, err := os.Create("out.obj")
 	check(err)
 	defer f.Close()
 
 	w := bufio.NewWriter(f)
-	model.Save(w)
+	finalWord.Save(w)
 	w.Flush()
 
 }
