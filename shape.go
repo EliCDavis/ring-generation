@@ -30,6 +30,7 @@ func NewShapeWithCustomCenter(bounds []*Vector2, center *Vector2) *Shape {
 func (s Shape) GetBounds() (Vector2, Vector2) {
 	bottomLeftBounds := Vector2{10000000, 10000000}
 	topRightBounds := Vector2{-10000000, -10000000}
+
 	for _, p := range s.points {
 		if p.x < bottomLeftBounds.x {
 			bottomLeftBounds.x = p.x

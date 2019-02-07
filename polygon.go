@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 )
 
 // Polygon represents a single polygon made up of multiple points
@@ -42,6 +43,52 @@ func (p Polygon) Translate(mv *Vector3) *Polygon {
 	newVertices := make([]Vector3, len(p.vertices))
 	for pIndex := range p.vertices {
 		newVertices[pIndex] = *p.vertices[pIndex].Add(mv)
+	}
+	return &Polygon{newVertices, p.normals, p.uv}
+}
+
+func (p Polygon) Rotate(amount *Vector3, pivot *Vector3) *Polygon {
+	newVertices := make([]Vector3, len(p.vertices))
+	for pIndex, point := range p.vertices {
+
+		final := point.Sub(pivot)
+
+		// Pretty sure is correct
+		zLength := math.Sqrt(math.Pow(final.x, 2.0) + math.Pow(final.y, 2.0))
+		if zLength > 0 {
+			zRot := math.Atan(final.y/final.x) + amount.z
+			final = NewVector3(
+				math.Cos(zRot)*zLength,
+				math.Sin(zRot)*zLength,
+				final.z,
+			)
+		}
+
+		// Not sure
+		// yLength := math.Sqrt(math.Pow(final.x, 2.0) + math.Pow(final.z, 2.0))
+		// if yLength > 0 {
+		// 	yRot := math.Atan(final.z/final.x) + amount.y
+		// 	final = NewVector3(
+		// 		math.Cos(yRot)*yLength,
+		// 		final.y,
+		// 		math.Sin(yRot)*yLength,
+		// 	)
+		// }
+
+		// // Not sure
+		// xLength := math.Sqrt(math.Pow(final.z, 2.0) + math.Pow(final.y, 2.0))
+		// if xLength > 0 {
+		// 	xRot := math.Atan(final.z/final.y) + amount.x
+		// 	final = NewVector3(
+		// 		final.x,
+		// 		math.Cos(xRot)*xLength,
+		// 		math.Sin(xRot)*xLength,
+		// 	)
+		// }
+
+		final = final.Add(pivot)
+
+		newVertices[pIndex] = *final
 	}
 	return &Polygon{newVertices, p.normals, p.uv}
 }

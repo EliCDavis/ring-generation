@@ -107,3 +107,7 @@ func (v *Vector3) Length() float64 {
 func (v *Vector3) SquaredLength() float64 {
 	return (v.x * v.x) + (v.y * v.y) + (v.z * v.z)
 }
+
+func (v Vector3) Distance(other *Vector3) float64 {
+	return math.Sqrt(math.Pow(other.x-v.x, 2.0) + math.Pow(other.y-v.y, 2.0) + math.Pow(other.z-v.z, 2.0))
+}

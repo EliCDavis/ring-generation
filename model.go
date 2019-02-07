@@ -30,6 +30,14 @@ func (m Model) Translate(movement *Vector3) *Model {
 	return &Model{newFaces}
 }
 
+func (p Model) Rotate(amount *Vector3, pivot *Vector3) *Model {
+	newVertices := make([]*Polygon, len(p.faces))
+	for pIndex, point := range p.faces {
+		newVertices[pIndex] = point.Rotate(amount, pivot)
+	}
+	return &Model{newVertices}
+}
+
 // Save Writes a model to obj format
 func (m Model) Save(w io.Writer) error {
 

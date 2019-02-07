@@ -2,7 +2,9 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"io/ioutil"
+	"log"
 	"math"
 	"os"
 
@@ -13,6 +15,7 @@ import (
 
 func check(e error) {
 	if e != nil {
+		log.Panicln("Error1")
 		panic(e)
 	}
 }
@@ -83,7 +86,13 @@ func lineIntersectsRectangle(x float64, y float64, width float64, height float64
 	return intersections
 }
 
-func fill(width float64, height float64, shapes []*Shape) []*Polygon {
+func fill(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
+
+	for _, shape := range shapes {
+		if len(shape.points) < 3 {
+			return nil, errors.New("Can't make a polygon with less than 3 points")
+		}
+	}
 
 	numOfPoints := 0
 	pointsPrefixSum := make([]int, len(shapes))
@@ -129,10 +138,16 @@ func fill(width float64, height float64, shapes []*Shape) []*Polygon {
 		poly, _ := NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
-	return betterPolys
+	return betterPolys, nil
 }
 
-func carve(width float64, height float64, shapes []*Shape) []*Polygon {
+func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
+
+	for _, shape := range shapes {
+		if len(shape.points) < 3 {
+			return nil, errors.New("Can't make a polygon with less than 3 points")
+		}
+	}
 
 	numOfPoints := 4
 	pointsPrefixSum := make([]int, len(shapes))
@@ -189,7 +204,7 @@ func carve(width float64, height float64, shapes []*Shape) []*Polygon {
 		poly, _ := NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
-	return betterPolys
+	return betterPolys, nil
 }
 
 func main() {
@@ -293,60 +308,59 @@ func main() {
 		polys[(sideIndex*8)+7] = square[1]
 	}
 
-	// model, err := NewModel(polys)
-	// check(err)
-
-	// f, err := os.Create("out.obj")
-	// check(err)
-	// defer f.Close()
-
-	// w := bufio.NewWriter(f)
-	// model.Save(w)
-	// w.Flush()
-
 	fontByteData, err := ioutil.ReadFile("./sample.ttf")
 	check(err)
 	parsedFont, err := truetype.Parse(fontByteData)
 	check(err)
 
-	// fontFace := truetype.NewFace(parsedFont, &truetype.Options{})
-
-	textToEnscribe := "r"
+	textToEnscribe := "re"
 
 	finalWord, err := NewModel([]*Polygon{})
 	check(err)
 
 	for _, char := range textToEnscribe {
-		// log.Println(truetype.Index( - 97))
+		log.Println(string(char))
 
 		glyph := truetype.GlyphBuf{}
 		glyph.Load(parsedFont, 100, parsedFont.Index(char), font.HintingNone)
 
 		letterPoints := make([]*Vector2, len(glyph.Points))
 		for i, p := range glyph.Points {
-			letterPoints[i] = NewVector2(float64(p.X), float64(p.Y))
+			letterPoints[i] = NewVector2(float64(p.X), float64(p.Y)+10)
 		}
 		shape := NewShape(letterPoints)
 		shape.Scale(.1)
 
 		bottomLeftBounds, topRightBounds := shape.GetBounds()
+		width := (topRightBounds.X() - bottomLeftBounds.X())
 
-		left, right := shape.Split(((topRightBounds.X() - bottomLeftBounds.X()) / 2) + bottomLeftBounds.X())
+		left, right := shape.Split((width / 2) + bottomLeftBounds.X())
+
+		for r := range right {
+			right[r].Translate(NewVector2(-(width / 2), 0))
+		}
 
 		if len(left) > 0 {
-			lModel, _ := NewModel(carve(20.0, 20.0, left))
+			carved, err := carve(width/2, 10.0, left)
+			check(err)
+			lModel, err := NewModel(carved)
+			check(err)
 			finalWord = finalWord.Merge(lModel)
 		}
 
 		if len(right) > 0 {
-			rModel, _ := NewModel(carve(20.0, 20.0, right))
-			rModel = rModel.Translate(NewVector3(25, 0, 0))
+			carved, err := carve((width/2)+0.5, 10.0, right)
+			check(err)
+			rModel, err := NewModel(carved)
+			check(err)
+			rModel = rModel.Translate(NewVector3((width/2)+0, 0, 0))
 			finalWord = finalWord.Merge(rModel)
 		}
 
-		//shape.Translate(NewVector2(7*float64(charIndex), 5))
-
+		finalWord = finalWord.Rotate(NewVector3(0, 0, 0), NewVector3(0, 0, 0)).Translate(NewVector3(-width, 0, 0))
 	}
+
+	log.Println("completed..")
 
 	f, err := os.Create("out.obj")
 	check(err)
