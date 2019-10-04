@@ -1,6 +1,10 @@
 package main
 
-import "math"
+import (
+	"math"
+
+	"github.com/EliCDavis/vector"
+)
 
 type Orientation int
 
@@ -15,10 +19,10 @@ const (
 // 0 --> p, q and r are colinear
 // 1 --> Clockwise
 // 2 --> Counterclockwise
-func calculateOrientation(p, q, r *Vector2) Orientation {
+func calculateOrientation(p, q, r *vector.Vector2) Orientation {
 	// See https://www.geeksforgeeks.org/orientation-3-ordered-points/
 	// for details of below formula.
-	val := ((q.y - p.y) * (r.x - q.x)) - ((q.x - p.x) * (r.y - q.y))
+	val := ((q.Y() - p.Y()) * (r.X() - q.X())) - ((q.X() - p.X()) * (r.Y() - q.Y()))
 
 	if val == 0 {
 		return Colinear
@@ -71,6 +75,6 @@ func doIntersect(l, other *Line) bool {
 
 // Given three colinear points p, q, r, the function checks if
 // point q lies on line segment 'pr'
-func onSegment(p, q, r *Vector2) bool {
-	return q.x <= math.Max(p.x, r.x) && q.x >= math.Min(p.x, r.x) && q.y <= math.Max(p.y, r.y) && q.y >= math.Min(p.y, r.y)
+func onSegment(p, q, r *vector.Vector2) bool {
+	return q.X() <= math.Max(p.X(), r.X()) && q.X() >= math.Min(p.X(), r.X()) && q.Y() <= math.Max(p.Y(), r.Y()) && q.Y() >= math.Min(p.Y(), r.Y())
 }

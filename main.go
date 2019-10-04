@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/EliCDavis/vector"
 	"github.com/golang/freetype/truetype"
 	"github.com/pradeep-pyro/triangle"
 	"golang.org/x/image/font"
@@ -21,22 +22,22 @@ func check(e error) {
 }
 
 func makeSquare(
-	bottomLeft *Vector3,
-	topLeft *Vector3,
-	topRight *Vector3,
-	bottomRight *Vector3,
+	bottomLeft *vector.Vector3,
+	topLeft *vector.Vector3,
+	topRight *vector.Vector3,
+	bottomRight *vector.Vector3,
 
-	bottomLeftTexture *Vector2,
-	topLeftTexture *Vector2,
-	topRightTexture *Vector2,
-	bottomRightTexture *Vector2,
+	bottomLeftTexture *vector.Vector2,
+	topLeftTexture *vector.Vector2,
+	topRightTexture *vector.Vector2,
+	bottomRightTexture *vector.Vector2,
 ) ([]*Polygon, error) {
 	polys := make([]*Polygon, 2)
 
 	poly, err := NewPolygonWithTexture(
-		[]Vector3{*bottomLeft, *topLeft, *bottomRight},
-		[]Vector3{*bottomLeft, *topLeft, *bottomRight},
-		[]Vector2{*bottomLeftTexture, *topLeftTexture, *bottomRightTexture},
+		[]*vector.Vector3{bottomLeft, topLeft, bottomRight},
+		[]*vector.Vector3{bottomLeft, topLeft, bottomRight},
+		[]*vector.Vector2{bottomLeftTexture, topLeftTexture, bottomRightTexture},
 	)
 	if err != nil {
 		return nil, err
@@ -44,9 +45,9 @@ func makeSquare(
 	polys[0] = poly
 
 	poly, err = NewPolygonWithTexture(
-		[]Vector3{*topLeft, *topRight, *bottomRight},
-		[]Vector3{*topLeft, *topRight, *bottomRight},
-		[]Vector2{*topLeftTexture, *topRightTexture, *bottomRightTexture},
+		[]*vector.Vector3{topLeft, topRight, bottomRight},
+		[]*vector.Vector3{topLeft, topRight, bottomRight},
+		[]*vector.Vector2{topLeftTexture, topRightTexture, bottomRightTexture},
 	)
 	if err != nil {
 		return nil, err
@@ -55,33 +56,33 @@ func makeSquare(
 	return polys, nil
 }
 
-func makeSquareFrom2D(bottomLeft, topRight *Vector2) []*Polygon {
+func makeSquareFrom2D(bottomLeft, topRight *vector.Vector2) []*Polygon {
 	polys, _ := makeSquare(
-		NewVector3(bottomLeft.X(), 0, bottomLeft.Y()),
-		NewVector3(bottomLeft.X(), 0, topRight.Y()),
-		NewVector3(topRight.X(), 0, topRight.Y()),
-		NewVector3(topRight.X(), 0, bottomLeft.Y()),
+		vector.NewVector3(bottomLeft.X(), 0, bottomLeft.Y()),
+		vector.NewVector3(bottomLeft.X(), 0, topRight.Y()),
+		vector.NewVector3(topRight.X(), 0, topRight.Y()),
+		vector.NewVector3(topRight.X(), 0, bottomLeft.Y()),
 
-		NewVector2(bottomLeft.X(), bottomLeft.Y()),
-		NewVector2(bottomLeft.X(), topRight.Y()),
-		NewVector2(topRight.X(), topRight.Y()),
-		NewVector2(topRight.X(), bottomLeft.Y()),
+		vector.NewVector2(bottomLeft.X(), bottomLeft.Y()),
+		vector.NewVector2(bottomLeft.X(), topRight.Y()),
+		vector.NewVector2(topRight.X(), topRight.Y()),
+		vector.NewVector2(topRight.X(), bottomLeft.Y()),
 	)
 	return polys
 }
 
 // pointWithinBounds checks whether or not a point exists inside a rectangle
-func pointWithinBounds(x float64, y float64, width float64, height float64, point Vector2) bool {
+func pointWithinBounds(x float64, y float64, width float64, height float64, point vector.Vector2) bool {
 	return point.X() >= x && point.X() < x+width && point.Y() >= y && point.Y() < y+height
 }
 
-func lineIntersectsRectangle(x float64, y float64, width float64, height float64, line *Line) []*Vector2 {
-	intersections := make([]*Vector2, 0)
+func lineIntersectsRectangle(x float64, y float64, width float64, height float64, line *Line) []*vector.Vector2 {
+	intersections := make([]*vector.Vector2, 0)
 
-	intersections = append(intersections, line.Intersection(NewLine(NewVector2(x, y), NewVector2(x+width, y))))
-	intersections = append(intersections, line.Intersection(NewLine(NewVector2(x, y), NewVector2(x, y+height))))
-	intersections = append(intersections, line.Intersection(NewLine(NewVector2(x+width, y), NewVector2(x+width, y+height))))
-	intersections = append(intersections, line.Intersection(NewLine(NewVector2(x, y+height), NewVector2(x+width, y+height))))
+	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y), vector.NewVector2(x+width, y))))
+	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y), vector.NewVector2(x, y+height))))
+	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x+width, y), vector.NewVector2(x+width, y+height))))
+	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y+height), vector.NewVector2(x+width, y+height))))
 
 	return intersections
 }
@@ -131,10 +132,10 @@ func fill(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 
 	betterPolys := make([]*Polygon, len(faces))
 	for i, face := range faces {
-		ourVerts := make([]Vector3, 0)
-		ourVerts = append(ourVerts, *NewVector3(v[face[0]][0], 0, v[face[0]][1]))
-		ourVerts = append(ourVerts, *NewVector3(v[face[1]][0], 0, v[face[1]][1]))
-		ourVerts = append(ourVerts, *NewVector3(v[face[2]][0], 0, v[face[2]][1]))
+		ourVerts := make([]*vector.Vector3, 0)
+		ourVerts = append(ourVerts, vector.NewVector3(v[face[0]][0], 0, v[face[0]][1]))
+		ourVerts = append(ourVerts, vector.NewVector3(v[face[1]][0], 0, v[face[1]][1]))
+		ourVerts = append(ourVerts, vector.NewVector3(v[face[2]][0], 0, v[face[2]][1]))
 		poly, _ := NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
@@ -197,10 +198,10 @@ func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 
 	betterPolys := make([]*Polygon, len(faces))
 	for i, face := range faces {
-		ourVerts := make([]Vector3, 3)
-		ourVerts[0] = *NewVector3(v[face[0]][0], 0, v[face[0]][1])
-		ourVerts[1] = *NewVector3(v[face[1]][0], 0, v[face[1]][1])
-		ourVerts[2] = *NewVector3(v[face[2]][0], 0, v[face[2]][1])
+		ourVerts := make([]*vector.Vector3, 3)
+		ourVerts[0] = vector.NewVector3(v[face[0]][0], 0, v[face[0]][1])
+		ourVerts[1] = vector.NewVector3(v[face[1]][0], 0, v[face[1]][1])
+		ourVerts[2] = vector.NewVector3(v[face[2]][0], 0, v[face[2]][1])
 		poly, _ := NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
@@ -223,32 +224,17 @@ func main() {
 		angle := angleIncrement * float64(sideIndex)
 		angleNext := angleIncrement * (float64(sideIndex) + 1)
 
-		bottomLeftUV := NewVector2(float64(sideIndex)/float64(sides/numTimesForTextureToRepeat), 0)
-		for bottomLeftUV.x > 1 {
-			bottomLeftUV.x -= 1.0
-		}
-
-		topLeftUV := NewVector2(float64(sideIndex)/float64(sides/numTimesForTextureToRepeat), 1.0)
-		for topLeftUV.x > 1 {
-			topLeftUV.x -= 1.0
-		}
-
-		topRightUV := NewVector2(float64(sideIndex+1)/float64(sides/numTimesForTextureToRepeat), 1.0)
-		for topRightUV.x > 1 {
-			topRightUV.x -= 1.0
-		}
-
-		bottomRightUV := NewVector2(float64(sideIndex+1)/float64(sides/numTimesForTextureToRepeat), 0)
-		for bottomRightUV.x > 1 {
-			bottomRightUV.x -= 1.0
-		}
+		bottomLeftUV := vector.NewVector2(math.Min(float64(sideIndex)/float64(sides/numTimesForTextureToRepeat), 1), 0)
+		topLeftUV := vector.NewVector2(math.Min(float64(sideIndex)/float64(sides/numTimesForTextureToRepeat), 1), 1.0)
+		topRightUV := vector.NewVector2(math.Min(float64(sideIndex+1)/float64(sides/numTimesForTextureToRepeat), 1), 1.0)
+		bottomRightUV := vector.NewVector2(math.Min(float64(sideIndex+1)/float64(sides/numTimesForTextureToRepeat), 1), 0)
 
 		// outer
 		square, err := makeSquare(
-			NewVector3(math.Cos(angle)*outerRadius, 0, math.Sin(angle)*outerRadius),
-			NewVector3(math.Cos(angle)*outerRadius, ringHeight, math.Sin(angle)*outerRadius),
-			NewVector3(math.Cos(angleNext)*outerRadius, ringHeight, math.Sin(angleNext)*outerRadius),
-			NewVector3(math.Cos(angleNext)*outerRadius, 0, math.Sin(angleNext)*outerRadius),
+			vector.NewVector3(math.Cos(angle)*outerRadius, 0, math.Sin(angle)*outerRadius),
+			vector.NewVector3(math.Cos(angle)*outerRadius, ringHeight, math.Sin(angle)*outerRadius),
+			vector.NewVector3(math.Cos(angleNext)*outerRadius, ringHeight, math.Sin(angleNext)*outerRadius),
+			vector.NewVector3(math.Cos(angleNext)*outerRadius, 0, math.Sin(angleNext)*outerRadius),
 			bottomLeftUV,
 			topLeftUV,
 			topRightUV,
@@ -261,10 +247,10 @@ func main() {
 
 		// inner
 		square, err = makeSquare(
-			NewVector3(math.Cos(angleNext)*innerRadius, 0, math.Sin(angleNext)*innerRadius),
-			NewVector3(math.Cos(angleNext)*innerRadius, ringHeight, math.Sin(angleNext)*innerRadius),
-			NewVector3(math.Cos(angle)*innerRadius, ringHeight, math.Sin(angle)*innerRadius),
-			NewVector3(math.Cos(angle)*innerRadius, 0, math.Sin(angle)*innerRadius),
+			vector.NewVector3(math.Cos(angleNext)*innerRadius, 0, math.Sin(angleNext)*innerRadius),
+			vector.NewVector3(math.Cos(angleNext)*innerRadius, ringHeight, math.Sin(angleNext)*innerRadius),
+			vector.NewVector3(math.Cos(angle)*innerRadius, ringHeight, math.Sin(angle)*innerRadius),
+			vector.NewVector3(math.Cos(angle)*innerRadius, 0, math.Sin(angle)*innerRadius),
 			bottomRightUV,
 			topRightUV,
 			topLeftUV,
@@ -277,10 +263,10 @@ func main() {
 
 		// top
 		square, err = makeSquare(
-			NewVector3(math.Cos(angle)*outerRadius, ringHeight, math.Sin(angle)*outerRadius),
-			NewVector3(math.Cos(angle)*innerRadius, ringHeight, math.Sin(angle)*innerRadius),
-			NewVector3(math.Cos(angleNext)*innerRadius, ringHeight, math.Sin(angleNext)*innerRadius),
-			NewVector3(math.Cos(angleNext)*outerRadius, ringHeight, math.Sin(angleNext)*outerRadius),
+			vector.NewVector3(math.Cos(angle)*outerRadius, ringHeight, math.Sin(angle)*outerRadius),
+			vector.NewVector3(math.Cos(angle)*innerRadius, ringHeight, math.Sin(angle)*innerRadius),
+			vector.NewVector3(math.Cos(angleNext)*innerRadius, ringHeight, math.Sin(angleNext)*innerRadius),
+			vector.NewVector3(math.Cos(angleNext)*outerRadius, ringHeight, math.Sin(angleNext)*outerRadius),
 			bottomLeftUV,
 			topLeftUV,
 			topRightUV,
@@ -293,10 +279,10 @@ func main() {
 
 		// bottom
 		square, err = makeSquare(
-			NewVector3(math.Cos(angle)*innerRadius, 0, math.Sin(angle)*innerRadius),
-			NewVector3(math.Cos(angle)*outerRadius, 0, math.Sin(angle)*outerRadius),
-			NewVector3(math.Cos(angleNext)*outerRadius, 0, math.Sin(angleNext)*outerRadius),
-			NewVector3(math.Cos(angleNext)*innerRadius, 0, math.Sin(angleNext)*innerRadius),
+			vector.NewVector3(math.Cos(angle)*innerRadius, 0, math.Sin(angle)*innerRadius),
+			vector.NewVector3(math.Cos(angle)*outerRadius, 0, math.Sin(angle)*outerRadius),
+			vector.NewVector3(math.Cos(angleNext)*outerRadius, 0, math.Sin(angleNext)*outerRadius),
+			vector.NewVector3(math.Cos(angleNext)*innerRadius, 0, math.Sin(angleNext)*innerRadius),
 			bottomLeftUV,
 			topLeftUV,
 			topRightUV,
@@ -313,7 +299,7 @@ func main() {
 	parsedFont, err := truetype.Parse(fontByteData)
 	check(err)
 
-	textToEnscribe := "re"
+	textToEnscribe := "Twitter"
 
 	finalWord, err := NewModel([]*Polygon{})
 	check(err)
@@ -324,9 +310,9 @@ func main() {
 		glyph := truetype.GlyphBuf{}
 		glyph.Load(parsedFont, 100, parsedFont.Index(char), font.HintingNone)
 
-		letterPoints := make([]*Vector2, len(glyph.Points))
+		letterPoints := make([]*vector.Vector2, len(glyph.Points))
 		for i, p := range glyph.Points {
-			letterPoints[i] = NewVector2(float64(p.X), float64(p.Y)+10)
+			letterPoints[i] = vector.NewVector2(float64(p.X), float64(p.Y)+10)
 		}
 		shape := NewShape(letterPoints)
 		shape.Scale(.1)
@@ -337,7 +323,7 @@ func main() {
 		left, right := shape.Split((width / 2) + bottomLeftBounds.X())
 
 		for r := range right {
-			right[r].Translate(NewVector2(-(width / 2), 0))
+			right[r].Translate(vector.NewVector2(-(width / 2), 0))
 		}
 
 		if len(left) > 0 {
@@ -345,7 +331,7 @@ func main() {
 			check(err)
 			lModel, err := NewModel(carved)
 			check(err)
-			finalWord = finalWord.Merge(lModel)
+			finalWord = finalWord.Merge(lModel) //.Rotate(NewVector3(0, 0, -.2), NewVector3(0, 0, 0)).Translate(NewVector3(-width/2, 1, 0))
 		}
 
 		if len(right) > 0 {
@@ -353,14 +339,14 @@ func main() {
 			check(err)
 			rModel, err := NewModel(carved)
 			check(err)
-			rModel = rModel.Translate(NewVector3((width/2)+0, 0, 0))
-			finalWord = finalWord.Merge(rModel)
+			rModel = rModel.Translate(vector.NewVector3((width/2)+0, 0, 0))
+			finalWord = finalWord.Merge(rModel) //.Rotate(NewVector3(0, 0, -.2), NewVector3(0, 0, 0)).Translate(NewVector3(-width/2, 1, 0))
 		}
 
-		finalWord = finalWord.Rotate(NewVector3(0, 0, 0), NewVector3(0, 0, 0)).Translate(NewVector3(-width, 0, 0))
+		finalWord = finalWord.Rotate(vector.NewVector3(0, 0, -.2), vector.NewVector3(0, 0, 0)).Translate(vector.NewVector3(-width, 1, 0))
 	}
 
-	log.Println("completed..")
+	log.Println("completed")
 
 	f, err := os.Create("out.obj")
 	check(err)

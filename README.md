@@ -7,6 +7,11 @@ To run use:
 docker-compose run ring-gen
 ```
 
+## Quaternion Math From
+
+https://github.com/go-gl/mathgl/blob/master/mgl32/quat.go#L260
+https://github.com/westphae/quaternion
+
 ## Current Progress
 
 ![Ring](https://i.imgur.com/pFQCKw4.png)

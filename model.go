@@ -3,6 +3,8 @@ package main
 import (
 	"errors"
 	"io"
+
+	"github.com/EliCDavis/vector"
 )
 
 // Model is built with a collection of polygons
@@ -22,7 +24,7 @@ func (m Model) Merge(other *Model) *Model {
 	return &Model{append(m.faces, other.faces...)}
 }
 
-func (m Model) Translate(movement *Vector3) *Model {
+func (m Model) Translate(movement *vector.Vector3) *Model {
 	newFaces := make([]*Polygon, len(m.faces))
 	for f := range m.faces {
 		newFaces[f] = m.faces[f].Translate(movement)
@@ -30,12 +32,12 @@ func (m Model) Translate(movement *Vector3) *Model {
 	return &Model{newFaces}
 }
 
-func (p Model) Rotate(amount *Vector3, pivot *Vector3) *Model {
-	newVertices := make([]*Polygon, len(p.faces))
-	for pIndex, point := range p.faces {
-		newVertices[pIndex] = point.Rotate(amount, pivot)
+func (m Model) Rotate(amount *vector.Vector3, pivot *vector.Vector3) *Model {
+	newFaces := make([]*Polygon, len(m.faces))
+	for f := range m.faces {
+		newFaces[f] = m.faces[f].Rotate(amount, pivot)
 	}
-	return &Model{newVertices}
+	return &Model{newFaces}
 }
 
 // Save Writes a model to obj format

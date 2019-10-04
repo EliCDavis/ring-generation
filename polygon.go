@@ -5,17 +5,19 @@ import (
 	"fmt"
 	"io"
 	"math"
+
+	"github.com/EliCDavis/vector"
 )
 
 // Polygon represents a single polygon made up of multiple points
 type Polygon struct {
-	vertices []Vector3
-	normals  []Vector3
-	uv       []Vector2
+	vertices []*vector.Vector3
+	normals  []*vector.Vector3
+	uv       []*vector.Vector2
 }
 
 // NewPolygon creates a new polygon
-func NewPolygon(vertices []Vector3, normals []Vector3) (*Polygon, error) {
+func NewPolygon(vertices []*vector.Vector3, normals []*vector.Vector3) (*Polygon, error) {
 	if vertices == nil {
 		return nil, errors.New("Must provide vertices")
 	}
@@ -39,28 +41,30 @@ func NewPolygon(vertices []Vector3, normals []Vector3) (*Polygon, error) {
 	return &Polygon{vertices, normals, nil}, nil
 }
 
-func (p Polygon) Translate(mv *Vector3) *Polygon {
-	newVertices := make([]Vector3, len(p.vertices))
+func (p Polygon) Translate(mv *vector.Vector3) *Polygon {
+	newVertices := make([]*vector.Vector3, len(p.vertices))
 	for pIndex := range p.vertices {
-		newVertices[pIndex] = *p.vertices[pIndex].Add(mv)
+		newVertices[pIndex] = p.vertices[pIndex].Add(mv)
 	}
-	return &Polygon{newVertices, p.normals, p.uv}
+	return &Polygon{newVertices, newVertices, p.uv}
 }
 
-func (p Polygon) Rotate(amount *Vector3, pivot *Vector3) *Polygon {
-	newVertices := make([]Vector3, len(p.vertices))
+func (p Polygon) Rotate(amount *vector.Vector3, pivot *vector.Vector3) *Polygon {
+	newVertices := make([]*vector.Vector3, len(p.vertices))
+
 	for pIndex, point := range p.vertices {
 
+		// https://play.golang.org/p/qWUotd3Lb56
 		final := point.Sub(pivot)
 
 		// Pretty sure is correct
-		zLength := math.Sqrt(math.Pow(final.x, 2.0) + math.Pow(final.y, 2.0))
+		zLength := math.Sqrt(math.Pow(final.X(), 2.0) + math.Pow(final.Y(), 2.0))
 		if zLength > 0 {
-			zRot := math.Atan(final.y/final.x) + amount.z
-			final = NewVector3(
+			zRot := math.Atan2(final.Y(), final.X()) + amount.Z()
+			final = vector.NewVector3(
 				math.Cos(zRot)*zLength,
 				math.Sin(zRot)*zLength,
-				final.z,
+				final.Z(),
 			)
 		}
 
@@ -75,7 +79,7 @@ func (p Polygon) Rotate(amount *Vector3, pivot *Vector3) *Polygon {
 		// 	)
 		// }
 
-		// // Not sure
+		// Not sure
 		// xLength := math.Sqrt(math.Pow(final.z, 2.0) + math.Pow(final.y, 2.0))
 		// if xLength > 0 {
 		// 	xRot := math.Atan(final.z/final.y) + amount.x
@@ -86,35 +90,33 @@ func (p Polygon) Rotate(amount *Vector3, pivot *Vector3) *Polygon {
 		// 	)
 		// }
 
-		final = final.Add(pivot)
-
-		newVertices[pIndex] = *final
+		newVertices[pIndex] = final.Add(pivot)
 	}
-	return &Polygon{newVertices, p.normals, p.uv}
+	return &Polygon{newVertices, newVertices, p.uv}
 }
 
 // NewPolygonFromShape creates a 3D polygon from a 2D shape
 func NewPolygonFromShape(shape *Shape) *Polygon {
-	vertices := make([]Vector3, len(shape.points))
+	vertices := make([]*vector.Vector3, len(shape.points))
 	for i, point := range shape.points {
-		vertices[i] = *NewVector3(point.x, 0, point.y)
+		vertices[i] = vector.NewVector3(point.X(), 0, point.Y())
 	}
 	poly, _ := NewPolygon(vertices, vertices)
 	return poly
 }
 
 // NewPolygonFromFlatPoints creates a polygon from 2d points
-func NewPolygonFromFlatPoints(points []*Vector2) *Polygon {
-	vertices := make([]Vector3, len(points))
+func NewPolygonFromFlatPoints(points []*vector.Vector2) *Polygon {
+	vertices := make([]*vector.Vector3, len(points))
 	for i, point := range points {
-		vertices[i] = *NewVector3(point.x, 0, point.y)
+		vertices[i] = vector.NewVector3(point.X(), 0, point.Y())
 	}
 	poly, _ := NewPolygon(vertices, vertices)
 	return poly
 }
 
 // NewPolygonWithTexture creates a polygon with uv coordinates
-func NewPolygonWithTexture(vertices []Vector3, normals []Vector3, texture []Vector2) (*Polygon, error) {
+func NewPolygonWithTexture(vertices []*vector.Vector3, normals []*vector.Vector3, texture []*vector.Vector2) (*Polygon, error) {
 	poly, err := NewPolygon(vertices, normals)
 	if err != nil {
 		return nil, err

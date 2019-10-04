@@ -1,26 +1,30 @@
 package main
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/EliCDavis/vector"
+)
 
 func TestPointInShape(t *testing.T) {
-	shape := NewShape([]*Vector2{
-		NewVector2(0, 0),
-		NewVector2(0, 1),
-		NewVector2(1, 1),
-		NewVector2(1, 0),
+	shape := NewShape([]*vector.Vector2{
+		vector.NewVector2(0, 0),
+		vector.NewVector2(0, 1),
+		vector.NewVector2(1, 1),
+		vector.NewVector2(1, 0),
 	})
-	point := NewVector2(0.5, 0.5)
+	point := vector.NewVector2(0.5, 0.5)
 	if shape.IsInside(point) == false {
 		t.Error("Point should be inside shape")
 	}
 }
 
 func TestGetPointtInShape(t *testing.T) {
-	shape := NewShape([]*Vector2{
-		NewVector2(0, 0),
-		NewVector2(0, 1),
-		NewVector2(1, 1),
-		NewVector2(1, 0),
+	shape := NewShape([]*vector.Vector2{
+		vector.NewVector2(0, 0),
+		vector.NewVector2(0, 1),
+		vector.NewVector2(1, 1),
+		vector.NewVector2(1, 0),
 	})
 	point := shape.RandomPointInShape()
 	if shape.IsInside(point) == false {
@@ -29,11 +33,11 @@ func TestGetPointtInShape(t *testing.T) {
 }
 
 func TestSplit(t *testing.T) {
-	shape := NewShape([]*Vector2{
-		NewVector2(0, 0),
-		NewVector2(0, 1),
-		NewVector2(1, 1),
-		NewVector2(1, 0),
+	shape := NewShape([]*vector.Vector2{
+		vector.NewVector2(0, 0),
+		vector.NewVector2(0, 1),
+		vector.NewVector2(1, 1),
+		vector.NewVector2(1, 0),
 	})
 
 	left, right := shape.Split(.5)
@@ -67,13 +71,13 @@ func TestSplit(t *testing.T) {
 	}
 
 	// l 2 points, r 1 point
-	shape = NewShape([]*Vector2{
-		NewVector2(0, 0),   // l
-		NewVector2(.7, .5), // r
-		NewVector2(0, 1),   // l
-		NewVector2(.3, 1),  // l
-		NewVector2(.9, .5), // r
-		NewVector2(.3, 0),  // l
+	shape = NewShape([]*vector.Vector2{
+		vector.NewVector2(0, 0),   // l
+		vector.NewVector2(.7, .5), // r
+		vector.NewVector2(0, 1),   // l
+		vector.NewVector2(.3, 1),  // l
+		vector.NewVector2(.9, .5), // r
+		vector.NewVector2(.3, 0),  // l
 	})
 
 	left, right = shape.Split(.5)
