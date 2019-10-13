@@ -8,6 +8,7 @@ import (
 	"math"
 	"os"
 
+	"github.com/EliCDavis/mesh"
 	"github.com/EliCDavis/vector"
 	"github.com/golang/freetype/truetype"
 	"github.com/pradeep-pyro/triangle"
@@ -22,32 +23,32 @@ func check(e error) {
 }
 
 func makeSquare(
-	bottomLeft *vector.Vector3,
-	topLeft *vector.Vector3,
-	topRight *vector.Vector3,
-	bottomRight *vector.Vector3,
+	bottomLeft vector.Vector3,
+	topLeft vector.Vector3,
+	topRight vector.Vector3,
+	bottomRight vector.Vector3,
 
-	bottomLeftTexture *vector.Vector2,
-	topLeftTexture *vector.Vector2,
-	topRightTexture *vector.Vector2,
-	bottomRightTexture *vector.Vector2,
-) ([]*Polygon, error) {
-	polys := make([]*Polygon, 2)
+	bottomLeftTexture vector.Vector2,
+	topLeftTexture vector.Vector2,
+	topRightTexture vector.Vector2,
+	bottomRightTexture vector.Vector2,
+) ([]mesh.Polygon, error) {
+	polys := make([]mesh.Polygon, 2)
 
-	poly, err := NewPolygonWithTexture(
-		[]*vector.Vector3{bottomLeft, topLeft, bottomRight},
-		[]*vector.Vector3{bottomLeft, topLeft, bottomRight},
-		[]*vector.Vector2{bottomLeftTexture, topLeftTexture, bottomRightTexture},
+	poly, err := mesh.NewPolygonWithTexture(
+		[]vector.Vector3{bottomLeft, topLeft, bottomRight},
+		[]vector.Vector3{bottomLeft, topLeft, bottomRight},
+		[]vector.Vector2{bottomLeftTexture, topLeftTexture, bottomRightTexture},
 	)
 	if err != nil {
 		return nil, err
 	}
 	polys[0] = poly
 
-	poly, err = NewPolygonWithTexture(
-		[]*vector.Vector3{topLeft, topRight, bottomRight},
-		[]*vector.Vector3{topLeft, topRight, bottomRight},
-		[]*vector.Vector2{topLeftTexture, topRightTexture, bottomRightTexture},
+	poly, err = mesh.NewPolygonWithTexture(
+		[]vector.Vector3{topLeft, topRight, bottomRight},
+		[]vector.Vector3{topLeft, topRight, bottomRight},
+		[]vector.Vector2{topLeftTexture, topRightTexture, bottomRightTexture},
 	)
 	if err != nil {
 		return nil, err
@@ -56,7 +57,7 @@ func makeSquare(
 	return polys, nil
 }
 
-func makeSquareFrom2D(bottomLeft, topRight *vector.Vector2) []*Polygon {
+func makeSquareFrom2D(bottomLeft, topRight *vector.Vector2) []mesh.Polygon {
 	polys, _ := makeSquare(
 		vector.NewVector3(bottomLeft.X(), 0, bottomLeft.Y()),
 		vector.NewVector3(bottomLeft.X(), 0, topRight.Y()),
@@ -76,21 +77,36 @@ func pointWithinBounds(x float64, y float64, width float64, height float64, poin
 	return point.X() >= x && point.X() < x+width && point.Y() >= y && point.Y() < y+height
 }
 
-func lineIntersectsRectangle(x float64, y float64, width float64, height float64, line *Line) []*vector.Vector2 {
-	intersections := make([]*vector.Vector2, 0)
+func lineIntersectsRectangle(x float64, y float64, width float64, height float64, line mesh.Line) []vector.Vector2 {
+	intersections := make([]vector.Vector2, 0)
 
-	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y), vector.NewVector2(x+width, y))))
-	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y), vector.NewVector2(x, y+height))))
-	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x+width, y), vector.NewVector2(x+width, y+height))))
-	intersections = append(intersections, line.Intersection(NewLine(vector.NewVector2(x, y+height), vector.NewVector2(x+width, y+height))))
+	point, err := line.Intersection(mesh.NewLine(vector.NewVector2(x, y), vector.NewVector2(x+width, y)))
+	if err == nil {
+		intersections = append(intersections, point)
+	}
+
+	point, err = line.Intersection(mesh.NewLine(vector.NewVector2(x, y), vector.NewVector2(x, y+height)))
+	if err == nil {
+		intersections = append(intersections, point)
+	}
+
+	point, err = line.Intersection(mesh.NewLine(vector.NewVector2(x+width, y), vector.NewVector2(x+width, y+height)))
+	if err == nil {
+		intersections = append(intersections, point)
+	}
+
+	point, err = line.Intersection(mesh.NewLine(vector.NewVector2(x, y+height), vector.NewVector2(x+width, y+height)))
+	if err == nil {
+		intersections = append(intersections, point)
+	}
 
 	return intersections
 }
 
-func fill(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
+func fill(width float64, height float64, shapes []mesh.Shape) ([]mesh.Polygon, error) {
 
 	for _, shape := range shapes {
-		if len(shape.points) < 3 {
+		if len(shape.GetPoints()) < 3 {
 			return nil, errors.New("Can't make a polygon with less than 3 points")
 		}
 	}
@@ -99,13 +115,13 @@ func fill(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 	pointsPrefixSum := make([]int, len(shapes))
 	for i, shape := range shapes {
 		pointsPrefixSum[i] = numOfPoints
-		numOfPoints += len(shape.points)
+		numOfPoints += len(shape.GetPoints())
 	}
 
 	flatPoints := make([][2]float64, numOfPoints)
 
 	for shapeIndex, shape := range shapes {
-		for pointIndex, point := range shape.points {
+		for pointIndex, point := range shape.GetPoints() {
 			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][0] = point.X()
 			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][1] = point.Y()
 		}
@@ -114,38 +130,38 @@ func fill(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 	segments := make([][2]int32, numOfPoints)
 
 	for shapeIndex, shape := range shapes {
-		for pointIndex := 0; pointIndex < len(shape.points); pointIndex++ {
+		for pointIndex := 0; pointIndex < len(shape.GetPoints()); pointIndex++ {
 			i := pointIndex + pointsPrefixSum[shapeIndex]
 			segments[i][0] = int32(i)
-			segments[i][1] = int32(((pointIndex + 1) % len(shape.points)) + pointsPrefixSum[shapeIndex])
+			segments[i][1] = int32(((pointIndex + 1) % len(shape.GetPoints())) + pointsPrefixSum[shapeIndex])
 		}
 	}
 
 	// Hole represented by a point lying inside it
 	var holes = make([][2]float64, len(shapes))
-	for i, _ := range shapes {
+	for i := range shapes {
 		holes[i][0] = 0
 		holes[i][1] = 0.0
 	}
 
 	v, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
 
-	betterPolys := make([]*Polygon, len(faces))
+	betterPolys := make([]mesh.Polygon, len(faces))
 	for i, face := range faces {
-		ourVerts := make([]*vector.Vector3, 0)
+		ourVerts := make([]vector.Vector3, 0)
 		ourVerts = append(ourVerts, vector.NewVector3(v[face[0]][0], 0, v[face[0]][1]))
 		ourVerts = append(ourVerts, vector.NewVector3(v[face[1]][0], 0, v[face[1]][1]))
 		ourVerts = append(ourVerts, vector.NewVector3(v[face[2]][0], 0, v[face[2]][1]))
-		poly, _ := NewPolygon(ourVerts, ourVerts)
+		poly, _ := mesh.NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
 	return betterPolys, nil
 }
 
-func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
+func carve(width float64, height float64, shapes []mesh.Shape) ([]mesh.Polygon, error) {
 
 	for _, shape := range shapes {
-		if len(shape.points) < 3 {
+		if len(shape.GetPoints()) < 3 {
 			return nil, errors.New("Can't make a polygon with less than 3 points")
 		}
 	}
@@ -154,7 +170,7 @@ func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 	pointsPrefixSum := make([]int, len(shapes))
 	for i, shape := range shapes {
 		pointsPrefixSum[i] = numOfPoints
-		numOfPoints += len(shape.points)
+		numOfPoints += len(shape.GetPoints())
 	}
 
 	flatPoints := make([][2]float64, numOfPoints)
@@ -165,7 +181,7 @@ func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 	flatPoints[3] = [2]float64{width, 0.0}
 
 	for shapeIndex, shape := range shapes {
-		for pointIndex, point := range shape.points {
+		for pointIndex, point := range shape.GetPoints() {
 			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][0] = point.X()
 			flatPoints[pointIndex+pointsPrefixSum[shapeIndex]][1] = point.Y()
 		}
@@ -179,10 +195,10 @@ func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 	segments[3] = [2]int32{3, 0}
 
 	for shapeIndex, shape := range shapes {
-		for pointIndex := 0; pointIndex < len(shape.points); pointIndex++ {
+		for pointIndex := 0; pointIndex < len(shape.GetPoints()); pointIndex++ {
 			i := pointIndex + pointsPrefixSum[shapeIndex]
 			segments[i][0] = int32(i)
-			segments[i][1] = int32(((pointIndex + 1) % len(shape.points)) + pointsPrefixSum[shapeIndex])
+			segments[i][1] = int32(((pointIndex + 1) % len(shape.GetPoints())) + pointsPrefixSum[shapeIndex])
 		}
 	}
 
@@ -196,13 +212,13 @@ func carve(width float64, height float64, shapes []*Shape) ([]*Polygon, error) {
 
 	v, faces := triangle.ConstrainedDelaunay(flatPoints, segments, holes)
 
-	betterPolys := make([]*Polygon, len(faces))
+	betterPolys := make([]mesh.Polygon, len(faces))
 	for i, face := range faces {
-		ourVerts := make([]*vector.Vector3, 3)
+		ourVerts := make([]vector.Vector3, 3)
 		ourVerts[0] = vector.NewVector3(v[face[0]][0], 0, v[face[0]][1])
 		ourVerts[1] = vector.NewVector3(v[face[1]][0], 0, v[face[1]][1])
 		ourVerts[2] = vector.NewVector3(v[face[2]][0], 0, v[face[2]][1])
-		poly, _ := NewPolygon(ourVerts, ourVerts)
+		poly, _ := mesh.NewPolygon(ourVerts, ourVerts)
 		betterPolys[i] = poly
 	}
 	return betterPolys, nil
@@ -215,7 +231,7 @@ func main() {
 	ringHeight := .8
 
 	sides := 32
-	polys := make([]*Polygon, sides*8)
+	polys := make([]mesh.Polygon, sides*8)
 
 	numTimesForTextureToRepeat := 8
 
@@ -301,7 +317,7 @@ func main() {
 
 	textToEnscribe := "Twitter"
 
-	finalWord, err := NewModel([]*Polygon{})
+	finalWord, err := mesh.NewModel([]mesh.Polygon{})
 	check(err)
 
 	for _, char := range textToEnscribe {
@@ -310,11 +326,16 @@ func main() {
 		glyph := truetype.GlyphBuf{}
 		glyph.Load(parsedFont, 100, parsedFont.Index(char), font.HintingNone)
 
-		letterPoints := make([]*vector.Vector2, len(glyph.Points))
+		letterPoints := make([]vector.Vector2, len(glyph.Points))
 		for i, p := range glyph.Points {
 			letterPoints[i] = vector.NewVector2(float64(p.X), float64(p.Y)+10)
 		}
-		shape := NewShape(letterPoints)
+
+		shape, err := mesh.NewShape(letterPoints)
+		if err != nil {
+			continue
+		}
+
 		shape.Scale(.1)
 
 		bottomLeftBounds, topRightBounds := shape.GetBounds()
@@ -329,7 +350,7 @@ func main() {
 		if len(left) > 0 {
 			carved, err := carve(width/2, 10.0, left)
 			check(err)
-			lModel, err := NewModel(carved)
+			lModel, err := mesh.NewModel(carved)
 			check(err)
 			finalWord = finalWord.Merge(lModel) //.Rotate(NewVector3(0, 0, -.2), NewVector3(0, 0, 0)).Translate(NewVector3(-width/2, 1, 0))
 		}
@@ -337,7 +358,7 @@ func main() {
 		if len(right) > 0 {
 			carved, err := carve((width/2)+0.5, 10.0, right)
 			check(err)
-			rModel, err := NewModel(carved)
+			rModel, err := mesh.NewModel(carved)
 			check(err)
 			rModel = rModel.Translate(vector.NewVector3((width/2)+0, 0, 0))
 			finalWord = finalWord.Merge(rModel) //.Rotate(NewVector3(0, 0, -.2), NewVector3(0, 0, 0)).Translate(NewVector3(-width/2, 1, 0))
